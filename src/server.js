@@ -1,12 +1,20 @@
+
+
+
 const express = require('express');
 const app = express();
 const path = require('path');
 const mongoose = require ("mongoose");
 const dotenv = require ("dotenv");
-const bcrypt = require('bcrypt');
+const bcrypt = require ('bcrypt');
+
+
+
+   
 
 
 const user = require("../models/users.js");
+const passport = require('passport');
 
 
 dotenv.config();
@@ -17,16 +25,30 @@ const public = path.join(__dirname, '../views')
 app.use(express.static(public));
 app.use(express.urlencoded({extended : true }));
 
+
 //connection to db
 
-mongoose.set("useFindAndModify", false);
-mongoose.connect(process.env.DB_CONNECT, { useNewUrlParser: true, useUnifiedTopology: true }, () => {
+mongoose.set("useUnifiedTopology", true);
+mongoose.connect(process.env.DB_CONNECT, { useNewUrlParser: true}, () => {
 console.log("Connected to db!");
 
-app.listen(3000, () => console.log("Server Up and running"));
 });
 
 app.set('view engine', 'ejs')
+
+const noteSchema = {
+    mail: String
+}
+const Note = mongoose.model('Note', noteSchema)
+
+app.post('/',(req, res) => {
+    let newNote = new Note({
+        mail: req.body.Email
+    })
+     
+    newNote.save()
+    res.redirect('/')
+})
 
 app.get('/', (req, res)=> {
     res.render('index.ejs');
@@ -46,14 +68,16 @@ app.get('/register', (req, res) => {
 })
 
 app.post('/register', async (req, res) => {
+    const hashedPassword = await bcrypt.hash(req.body.password, 10)
     console.log(req.body)
 
     let users= new user({
 
         name: req.body.name,
         email: req.body.email,
-        password: req.body.password
+        password: req.body.password,
     })
+    users.password = hashedPassword
     try{
         await users.save();
         res.redirect("/login")
@@ -62,5 +86,9 @@ app.post('/register', async (req, res) => {
         res.redirect("/login")
     }
 })
+
+
+app.listen(3000, () => console.log("Server Up and running"));
+
 
 
